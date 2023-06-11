@@ -1,0 +1,42 @@
+# - name: Download a file
+#   get_url:
+#     url: http://ipv4.download.thinkbroadband.com/20MB.zip
+#     dest: /tmp
+  # environment: proxy_vars
+
+# - name: Add an environment variable to the remote user's shell
+#   lineinfile:
+#     dest: "~/.bash_profile"
+#     regexp: "^ENV_VAR="
+#     line: "ENV_VAR=value"
+#   become: false
+  
+# - name: Get the value of an environment variable
+#   shell: 'source ~/.bash_profile && echo $ENV_VAR'
+#   register: foo
+#   become: false
+
+# - debug: msg="The variable is {{ foo.stdout }}"
+
+- name: Ensure Apache is installed
+  package:
+    name: "{{ apache_package }}"
+    state: present
+  register: foo
+
+- debug: var=foo
+
+- name: Copy test config file
+  copy: 
+    src: files/test.conf
+    dest: "{{ apache_config_dir }}/test.conf"
+  notify: restart apache # if there is no change, it won't notify the handler, or if the playbook fails, handlers won't get run
+  
+- name: Make sure handlers are flushed immediately, instead of waiting at the end of the playbook
+  meta: flush_handlers
+
+- name: Ensure Apache is started now and at boot
+  service:
+    name: "{{ apache_service }}"
+    state: started
+    enabled: true

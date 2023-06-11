@@ -1,0 +1,108 @@
+---
+- hosts: centos
+  become: true
+
+  handlers:
+    - name: restart ssh
+      service: 
+        name: sshd
+        state: restarted
+
+  tasks:
+    - name: Tell SELinux about SSH's new port
+      seport: 
+        ports: 2849
+        proto: tcp
+        setype: ssh_port_t
+        state: present
+
+    - name: Make sure SSH is more secure
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+        validate: "sshd -t -f %s"
+      with_items:
+        - regexp: "^PasswordAuthentication"
+          line: "PasswordAuthentication no"
+        - regexp: "^PermitRootLogin"
+          line: "PermitRootLogin no"
+        - regexp: "^Port"
+          line: "Port 2849"
+      notify: restart ssh
+
+    - name: Add user johndoe
+      user:
+        name: johndoe
+
+    - name: Add sudo group rights for deployment user
+      lineinfile: 
+        dest: /etc/sudoers
+        regexp: "^johndoe"
+        line: "johndoe ALL=(ALL) NOPASSWD: ALL"
+        state: present
+        validate: "visudo -cf %s"
+
+    - name: Remove unused packages
+      package: 
+        name:
+          - nano
+          - sendmail
+          - httpd
+        state: absent
+
+    - name: Configure the permissions for the messages log
+      file:
+        path: /var/log/messages
+        owner: root
+        group: root
+        mode: 0600
+
+    - name: Make sure everything is up to date
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Set up autoupdates
+      yum:
+        name: dnf-automatic
+        state: present
+
+    - name: Ensure auto updates are running
+      service:  
+        name: dnf-automatic-install.timer
+        state: started
+        enabled: yes
+
+    - name: Install firewalld
+      package:
+        name: firewalld
+        state: present
+
+    - name: Configure open ports with firewalld
+      firewalld:
+        state: "{{ item.state }}"
+        port: "{{ item.port }}"
+        zone: external
+        immediate: yes
+        permanent: yes
+      with_items:
+        - { state: 'enabled', port: '22/tcp' }
+        - { state: 'enabled', port: '2849/tcp' }
+        - { state: 'enabled', port: '80/tcp' }
+        - { state: 'enabled', port: '123/udp' }
+        
+    - name: Ensure firewalld is running
+      service: 
+        name: firewalld
+        state: started
+
+
+    
+
+
+    
+    
+    
+

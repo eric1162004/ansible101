@@ -1,0 +1,36 @@
+---
+- name: install apache
+  hosts: centos
+  # gather_facts: false # true by default
+  become: true
+
+  # this environment applies all tasks in the playbook
+  # environment: 
+    # http_proxy: http://example-proxy:80/
+    # https_proxy: https://example-proxy:80/ 
+
+  # vars: # you can inject vars into a task
+    # proxy_vars:
+    #     http_proxy: http://example-proxy:80/
+    #     https_proxy: https://example-proxy:80/
+    # - apache_package: apache2
+    # - apache_service: apache2
+    # - apache_config_dir: /etc/apache2/sites-enabled
+
+  # vars_file: # you can save vars in an external file
+  #   - vars/apache_default.yml
+  #   - vars/apache_{{ ansible_os_family }}.yml # this is a special ansible variable
+
+  handlers:
+    - import_tasks: handlers/apache.yml
+
+  pre_tasks:
+    # - debug: var=ansible_os_family
+    - name: Load variable files
+      include_vars: "{{ item }}"
+      with_first_found:
+        - "vars/apache_{{ ansible_os_family }}.yml"
+        - vars/apache_default.yml
+
+  tasks:
+    - import_tasks: tasks/apache.yml

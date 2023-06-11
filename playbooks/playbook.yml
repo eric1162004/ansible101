@@ -1,0 +1,45 @@
+---
+- name: install apache
+  hosts: all
+  become: true
+
+  tasks:
+    # - name: Install Apache
+    #   command: yum install --quiet -y httpd httpd-devel
+
+    - name: Install Apache 
+      dnf:
+        name:
+          - httpd
+          - httpd-devel
+        state: present
+      become: true
+
+    # - name: Copy configuration files
+    #   command: >
+    #     cp httd.conf /etc/httpd/conf/httpd.conf
+    # - command: >
+    #     cp httpd-vhosts /etc/httpd/conf/httpd-vhosts.conf
+
+    - name: Copy configuration files
+      copy: 
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: 0644
+      with_items:
+        - src: httpd.conf
+          dest: /etc/httpd/conf/httpd.conf
+        - src: httpd-vhosts.conf
+          dest: /etc/httpd/conf/httpd-vhosts.conf
+
+    - name: Ensure Apache is started now and at boot
+      service:
+        name: httpd
+        state: started
+        enabled: true
+
+    # - name: start Apache and configure it to run at boot
+    #   command: service httpd start
+    # - command: chkconfig httpd on
